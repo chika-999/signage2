@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>天気＋時刻＋動画サイネージ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Noto Sans JP', sans-serif;
+      background-color: #fff;
+      color: #333;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .left, .right {
+      width: 50%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .right {
+      background-color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .right video {
+      width: 100%;
+      max-height: 90%;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      object-fit: contain;
+    }
+
+    .title {
+      font-size: 26px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    #realtime1 {
+      font-size: 18px;
+      color: #555;
+    }
+
+    #weather {
+      font-size: 16px;
+      margin: 10px 0;
+    }
+
+    .forecast-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .forecast-cell {
+      background: #f7f7f7;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 15px;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .icon {
+      font-size: 24px;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .text {
+      margin-top: 20px;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="left">
+      <div class="title">サイネージ情報表示</div>
+      <div id="realtime1"></div>
+      <div id="weather"></div>
+      <div id="hourly"></div>
+      <div class="text">
+        この画面は手稲区の現在の天気と時刻、近未来予報を表示しています。右側には動画が繰り返し再生されています。
+      </div>
+    </div>
+    <div class="right">
+      <video src="sample.mp4" autoplay muted playsinline loop></video>
+    </div>
+  </div>
+
+  <script>
+    async function fetchWeather() {
+      const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=43.1219&longitude=141.2459&hourly=temperature_2m,weathercode&current_weather=true&timezone=Asia%2FTokyo");
+      const data = await res.json();
+
+      const current = data.current_weather;
+      document.getElementById("weather").innerHTML = 
+        `手稲区の現在：${current.temperature}℃／風速 ${current.windspeed} m/s`;
+
+      const times = data.hourly.time;
+      const temps = data.hourly.temperature_2m;
+      const codes = data.hourly.weathercode;
+
+      const now = new Date();
+      let html = "<div class='forecast-grid'>";
+      let count = 0;
+
+      for (let i = 0; i < times.length; i++) {
+        const t = new Date(times[i]);
+        if (t >= now && count < 6) {
+          const hour = t.getHours();
+          const icon = getWeatherIcon(codes[i]);
+          html += `<div class='forecast-cell'>${hour}時<br>${temps[i]}℃<span class='icon'>${icon}</span></div>`;
+          count++;
+        }
+      }
+
+      html += "</div>";
+      document.getElementById("hourly").innerHTML = html;
+    }
+
+    function getWeatherIcon(code) {
+      if ([0].includes(code)) return "☀️";
+      if ([1, 2].includes(code)) return "🌤️";
+      if ([3].includes(code)) return "☁️";
+      if ([45, 48].includes(code)) return "🌫️";
+      if ([51, 53, 55, 61, 63, 65].includes(code)) return "🌦️";
+      if ([80, 81, 82].includes(code)) return "🌧️";
+      if ([95, 96, 99].includes(code)) return "⛈️";
+      return "❓";
+    }
+
+    function twoDigit(num) {
+      return num < 10 ? "0" + num : num;
+    }
+
+    function showClock() {
+      const now = new Date();
+      const msg = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${twoDigit(now.getHours())}:${twoDigit(now.getMinutes())}:${twoDigit(now.getSeconds())}`;
+      document.getElementById("realtime1").innerHTML = msg;
+    }
+
+    window.onload = () => {
+      fetchWeather();
+      showClock();
+      setInterval(showClock, 1000);
+    };
+
+    setInterval(fetchWeather, 10 * 60 * 1000); // 10分ごとに更新
+  </script>
+</body>
+</html>
