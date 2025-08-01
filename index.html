@@ -118,7 +118,7 @@
 
       for (let i = 0; i < times.length; i++) {
         const t = new Date(times[i]);
-        if (t >= now && count < 7) {
+        if (t >= now && count < 5) {
           const hour = t.getHours();
           const icon = getWeatherIcon(codes[i]);
           html += `<div class='forecast-cell'>${hour}時<br>${temps[i]}℃<span class='icon'>${icon}</span></div>`;
